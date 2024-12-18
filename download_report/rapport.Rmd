@@ -1,0 +1,146 @@
+---
+title: ''
+author: ''
+date: ''
+output:
+  word_document:
+    reference_docx: "temp_rapport_palu.docx"
+  pdf_document:
+params:
+  daterange1: "2024-02-19"
+  daterange2: !r Sys.Date()
+  site: Saint Elie
+---
+
+```{r setup chunks}
+#knitr::opts_knit$set(root.dir = '~/GB_Owncloud/EMIPaL/Shiny-EMIPaL')
+knitr::opts_chunk$set(
+	echo = F, 	warning = F, 	message = F, include = T,
+	dev = "ragg_png",
+	dpi = 300
+)
+```
+
+```{r config_environment, include=FALSE}
+source('scripts/1_config_env.R')
+source('scripts/4_plots_func.R')
+```
+
+```{r load_data, include=FALSE}
+# source('scripts/2_load_data.R') # pour le déploiement
+bdd <- readRDS("data/bdd.rds")
+```
+
+
+```{r execute shiny params, include=FALSE}
+bdd_filtered <- bdd %>% filter(date_mission >=  params$daterange1 & 
+                       date_mission <= params$daterange2) %>%
+  filter(lieu == params$site)
+```
+
+<b>**Date du rapport :** `r format(as.Date(Sys.Date()), "%d %B %Y")`.</b>
+<p>**Période :** du `r format(as.Date(params$daterange1), "%d %B %Y") ` au `r format(as.Date(params$daterange2), "%d %B %Y")`.</p>
+<p>**Site d'intervention :** `r params$site`.</p>  
+
+# Âge et sexe des personnes consultées  
+```{r 1_fig_age_sexe, fig.align='center', fig.height=4, fig.width=9}
+plot_age_sexe(bdd_filtered) 
+```
+Au total, `r length(unique(df$ID))` personnes ont été consultées sur ce site depuis le début des interventions.
+
+
+# Figure 2 : nombre d'orpailleurs selon le pays d'origine  
+```{r plot_nb_orpa_pays, echo=FALSE}
+ plot_nb_orpa_pays(bdd_filtered) 
+```
+
+
+# Figure 3 : Provenance des personnes selon les sites d'orpaillage
+```{r plot_prop_orpa_site, echo=FALSE}
+plot_prop_orpa_site(bdd_filtered)
+```
+
+# Figure 4 : Nombre et type de consultations
+```{r plot_nb_consult, echo=FALSE}
+plot_nb_consult(bdd_filtered) 
+```
+
+
+# Figure 5 : Consultations médicales pour introduction de Primaquine et rendu bilan sanguin   
+```{r plot_consult_suivi, echo=FALSE}
+plot_consult_suivi(bdd_filtered)
+```
+
+`r if (nrow(df) != 0) {paste0("Au total, ", sum(df$freq), " consultations médicales ont été réalisées pour introduction et suivi de primaquine, et rendu de bilan sanguin.")}`  
+
+
+# Nombre d'interventions réalisées par site et nombre de sites d'intervention
+
+
+
+# Taux de positivité des personnes dépistées par PCR
+
+`r if (sum(df$Tot) == 0) {paste0("Aucun test PCR réalisé ou tests en attente des résultats.") }`
+
+`r if (sum(df$Tot) != 0) {paste0("Au total, ", sum(df$Tot), " tests PCR ont été effectués parmi lesquels ", sum(df$Pos), " se sont révélés positifs.")}`  
+
+
+
+```{r 7_Autres_indicateurs PCR}
+df <- bdd %>% select(ID, PCR) %>% unique() %>% filter(PCR != "NR")
+```
+Au total, `r nrow(df)` personnes ont été testées par TDR au moins une fois. Parmi elles,
+`r nrow(df) - length(df$PCR[which(df$PCR == "Négative")])` ont été testées positives.
+
+# Taux de positivité des personnes dépistées par TDR
+
+`r if (sum(df$Tot) == 0) {paste0("Aucun test PCR réalisé ou tests en attente des résultats.") }`
+
+
+# Taux de positivité des personnes dépistées par FGE
+```{r}
+
+```
+
+# Nombre de personnes dépistées G6PD (rapide)
+```{r}
+
+```
+
+# Nombre de consultations médicales ayant conduit à l'instauration et délivrance d'un traitement
+```{r}
+
+```
+
+# Nombre de consultations médicales ayant conduit à l'instauration et délivrance d'un traitement éradicateur par primaquine sur facteurs de risques
+```{r}
+
+```
+
+# Nombre de personnes ayant bénéficié de l'instauration et de la délivrance d'un traitement
+```{r}
+
+```
+
+# Nombre de personnes ayant bénéficié de l'instauration et de la délivrance d'un traitement éradicateur par primaquine sur facteurs de risques.
+```{r}
+
+```
+
+# Nombre de personnes avec PCR positif et TTT complet.
+```{r}
+
+```
+
+# Nombre de personnes accès palustre avec traitement complet
+```{r}
+
+```
+
+
+
+
+
+
+
+

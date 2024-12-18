@@ -1,0 +1,233 @@
+---
+title: "<img src = 'logo_emipal.png' width = '300'> <br><br> Rapport Équipe Mobile
+  d’Intervention Paludisme Littoral - EMIPaL <br>"
+author: ''
+date: ''
+output:
+  html_document: default
+  word_document:
+    reference_docx: temp_rapport_palu.docx
+runtime: shiny
+resource_files:
+- logo_emipal.png
+- download_report/app.R
+- scripts/2_load_data.R
+---
+
+<style type="text/css">
+body        {/* Normal */     font-family:"Calibri"; font-size:16px; font-style:bold; color:black  }
+td          {/* Table */      font-family:"Calibri"; font-size:12px; }
+h1.title    {/* Title */      font-family:"Calibri"; font-size:22px; font-style:bold; color:#43a4d9;
+                              text-align: left }
+h1.subtitle {/* Subtitle */   font-family:"Calibri"; font-size:20px; font-style:bold; color:green ;
+                              text-align: center}
+h1          {/* Header 1 */   font-family:"Calibri"; font-size:20px; font-style:bold; color:tomato;  }
+h2          {/* Header 2 */   font-family:"Calibri"; font-size:16px; font-styles:bold; color:green;  }
+h3          {/* Header 3 */   font-family:"Calibri"; font-size:30px; font-styles:bold; color:steelblue ;
+                              text-align: center}
+code.r      {/* Code block */ font-family:"Calibri"; font-size:1px; }
+pre         {/* Code block -  determines code spacing between lines */ font-size: 8px; }
+caption     {/* caption */    font-family:"Calibri"; font-size:13px; font-style:bold; color:grey20;
+                              text-align: center}
+</style>
+
+```{r setup_chunks, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r config_environment, include=FALSE}
+source('scripts/1_config_env.R')
+source('scripts/4_plots_func.R')
+```
+
+```{r load_data, include=FALSE}
+#source('scripts/2_load_data.R', encoding = "UTF-8")
+# Just one time the 3 following lines
+#cronR::cron_ls()
+#cronR::cron_clear(ask = TRUE)
+#cronR::cron_add(cronR::cron_rscript("scripts/2_load_data.R"),
+#                frequency = "minutely",
+#                at = "01:35",
+#                description = "load data")
+
+#shiny::reactiveFileReader(1000, session = NULL, filePath = "data/mydata.rda",
+#                                 load, envir = .GlobalEnv) #.GlobalEnv
+bdd <- readRDS("data/bdd.rds")
+```
+
+---  
+# Contexte
+L’intervention de l’EMIPAL a été déployée suite à de nombreux cas de paludisme diagnostiqués depuis fin décembre 2023 dans le quartier des Brésiliens et à la Crique Nationale (site d’orpaillage illégal).
+
+Les objectifs de l’intervention :
+
+-	Informer et sensibiliser les habitant.e.s sur le paludisme et les gestes de prévention ;
+-	Repérer les personnes symptomatiques pour proposer un TDR palu et réaliser une prise en charge médicale en cas de résultat positif (consultation médicale, réalisation de TROD G6PD et délivrance des traitements si résultat correct) ;
+-	Repérer les cas déjà diagnostiqués, faire le point sur leur état de santé et s’assurer du suivi complet du traitement ;
+-	Proposer la réalisation d’une PCR paludisme pour les personnes travaillant dans les sites d’orpaillage ;
+-	Distribuer des moustiquaires aux cas positifs (et à leur entourage), aux femmes enceintes et aux enfants de moins de 5ans.  
+
+
+# Saisir la période et le site   
+```{r}
+inputPanel(
+    dateRangeInput(inputId = "daterange",
+                                       label = "Période",
+                                       start = min(bdd$date_mission),
+                                       min = min(bdd$date_mission),
+                                       end = paste(Sys.Date()),
+                                       max = paste(Sys.Date())
+                                       ),
+  
+    selectInput("site", label = "Site d'intervention",
+              choices = c("pk6", "Saint Elie"), selected = "")
+  )
+```
+
+```{r Chargement des données et application filtres}
+bdd_filtered <- reactive(
+  bdd %>%
+    filter(date_mission >= input$daterange[1] &
+             date_mission < input$daterange[2]) %>%
+    filter(lieu == input$site)
+)
+```
+
+
+# Figure 1 : Âge et sexe des personnes consultées
+```{r}
+df1 <- reactive(
+  bdd_filtered() %>%
+    select(ID, sexe, age_class) %>% unique() )
+```
+Au total, `r reactive(print(length(unique(df1()$ID))))` personnes ont été consultées sur
+ce site depuis le début des interventions.
+```{r plot_age_sexe}
+renderPlot({  plot_age_sexe(df1())  })
+```
+
+
+# Figure 2 : Nombre d'orpailleurs selon le pays d'origine  
+```{r}
+df2 <- reactive(
+  bdd_filtered() %>%
+  select(ID, orpaillage, pays_de_naissance) %>%
+  filter(orpaillage == "Oui" & pays_de_naissance != "Donnée manquante") %>%
+  group_by(pays_de_naissance) %>%
+  unique() %>%
+  summarise(freq = n()) )
+```
+Au total, `r reactive(print(sum(df2()$freq)))` personnes ont une activité d'orpaillage.  
+```{r plot_nb_orpa_pays}
+renderPlot({  plot_nb_orpa_pays(df2())  })
+```
+
+
+# Figure 3 : Provenance des personnes selon les sites d'orpaillage
+```{r plot_prop_orpa_site}
+renderPlot({
+ plot_prop_orpa_site(bdd_filtered()) 
+})
+```
+
+
+# Figure 4 : Nombre et type de consultations
+Au total, `r reactive(sum(!is.na(bdd_filtered()$Motif_Principal)))` consultations médicales (primo-consultation ou consultation de suivi) ont été réalisées sur ce site d'intervention.   
+
+```{r plot_nb_consult}
+renderPlot({
+ plot_nb_consult(bdd_filtered()) 
+})
+```
+
+
+# Figure 5 : Consultations médicales pour introduction ou suivi de Primaquine, et rendu bilan sanguin   
+```{r plot_consult_suivi, include=TRUE}
+renderPlot({
+ plot_consult_suivi(bdd_filtered())
+})
+
+```
+Nombre : `r reactive(plot_consult_suivi(bdd_filtered())$x)`  
+
+ 
+
+# Figure 6 : Nombre d'interventions réalisées par site d'interventions ----  
+```{r plot_sites_inter}
+renderPlot({
+  plot_sites_inter(bdd_filtered()) 
+})
+```
+
+
+
+# Figure 7 : Taux de positivité des personnes dépistées par PCR
+```{r plot_PCR, include=TRUE}
+renderPlot({
+  plot_PCR(bdd_filtered()) 
+})
+```
+
+
+# Figure 8 : Taux de positivité des personnes dépistées par TDR
+```{r plot_TDR}
+renderPlot({
+  plot_TDR(bdd_filtered()) 
+})
+```
+
+# Figure 9 : Taux de positivité des personnes dépistées par FGE
+```{r plot_FGE}
+renderPlot({
+  plot_FGE(bdd_filtered()) 
+})
+```  
+
+# To be continued...  
+
+
+
+# Téléchargement du rapport
+```{r SERVER, include = FALSE}
+output$downloadReport <- downloadHandler(
+    filename = function() {
+      paste('mon_rapport', sep = '.',
+            switch(input$format,
+                   PDF = 'pdf',
+                   Word = 'docx'
+      ))
+    },
+    content = function(file) {
+      src <- normalizePath(c('rapport.Rmd', 'temp_rapport_palu.docx'))
+      # temporarily switch to the temp dir, in case you do not have write
+      # permission to the current working directory
+      owd <- setwd(tempdir())
+      on.exit(setwd(owd))
+      file.copy(src, c('rapport.Rmd', 'temp_rapport_palu.docx'), overwrite = TRUE)
+      out <- rmarkdown::render('rapport.Rmd',
+                               params = list(
+                                 daterange1 = input$daterange[1],
+                                 daterange2 = input$daterange[2],
+                                 site = input$site),
+                               
+                               switch(input$format,
+                                      PDF = pdf_document(), 
+                                      HTML = html_document(), 
+                                      Word = word_document(reference_docx = "temp_rapport_palu.docx")
+                               ))
+      file.rename(out, file)
+    }
+)
+```
+
+Vous pouvez télécharger un rapport en choisissant la période et le site.
+
+```{r include=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+fluidPage(
+shinyAppDir('download_report',
+  options = list(width = "100%", height = 550)
+)
+)
+```
+
+

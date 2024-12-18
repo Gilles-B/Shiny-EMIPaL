@@ -1,0 +1,12 @@
+name: Shiny_EMIPaL
+title: Shiny_EMIPaL
+username: r-bgilles
+account: r-bgilles
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13543824
+bundleId: 9502529
+url: https://r-bgilles.shinyapps.io/Shiny_EMIPaL/
+version: 1
+asMultiple: TRUE
+asStatic: FALSE
